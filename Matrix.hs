@@ -38,13 +38,6 @@ partition n xs = go n xs where
 -- | getting random indices
 randomIndices pc m = do
   rg <- getStdGen
-  let rr = take (round $ pc * fromIntegral (ncol m)) $ (randomRs (0, ncol m) rg)
-  let rc = take (round $ pc * fromIntegral (nrow m)) $ (randomRs (0, nrow m) rg)
-  return $ Entry <$> rr <*> rc
-
-
-randomIndices' pc m = do
-  rg <- getStdGen
   let
     s = size m
     idx = map (indexToEntry s) $ take (round $ pc * fromIntegral s) $ randomRs (0, s) rg
