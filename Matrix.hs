@@ -10,8 +10,6 @@ import Data.Monoid
 import System.Random
 import System.Random.Shuffle
 
-import Shuffle
-
 -- | Matrix datatypes
 data Entry = Entry { _row :: Row
                    , _col :: Col
@@ -63,20 +61,13 @@ partition n xs = go n xs where
   go n xs = p : (go n s) where
     (p, s) = splitAt n xs
 
--- | Random indices
-randomIndices pc r s= do
-  rg <- getStdGen
-  let
-    idx = take (round $ pc * fromIntegral s) $ shuffle' [0..s] (s+1) rg
-    ex = map (indexToEntry r) idx
-  return ex
 
-indexToEntry :: Int -> Int -> Entry
-indexToEntry r = uncurry Entry . flip divMod r
-
-rp' pc r s = do
+randomIndices pc r s = do
   g <- getStdGen
-  return $ map (indexToEntry r) $ take (round $ pc * fromIntegral s) $ shuffle' [0..s] (s+1) g
+  return $ map (indexToEntry r) $ take (round $ pc * fromIntegral s) $ shuffle' [0..s] (s+1) g where
+    indexToEntry :: Int -> Int -> Entry
+    indexToEntry r = uncurry Entry . flip divMod r
+
 
 -- | Simulation
 
@@ -112,6 +103,7 @@ main = do
   let rows = 20
   --let m = mkMatrix rows rows Nothing :: Matrix Agent
 
+  -- TODO: better way of implementing this, so that there is a list comprehension for each kind of agent.
   (ys, bs) <- randomPop pc rows (rows^2) 2
 
   print $ length bs
