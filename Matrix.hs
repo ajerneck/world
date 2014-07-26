@@ -8,6 +8,9 @@ import qualified Data.Map as M
 import Data.Maybe (fromJust)
 import Data.Monoid
 import System.Random
+import System.Random.Shuffle
+
+import Shuffle
 
 -- | Matrix datatypes
 data Entry = Entry { _row :: Row
@@ -64,11 +67,16 @@ partition n xs = go n xs where
 randomIndices pc r s= do
   rg <- getStdGen
   let
-    idx = take (round $ pc * fromIntegral s) $ randomRs (0, s) rg
+    idx = take (round $ pc * fromIntegral s) $ shuffle' [0..s] (s+1) rg
     ex = map (indexToEntry r) idx
-    indexToEntry :: Int -> Int -> Entry
-    indexToEntry r = uncurry Entry . flip divMod r
   return ex
+
+indexToEntry :: Int -> Int -> Entry
+indexToEntry r = uncurry Entry . flip divMod r
+
+rp' pc r s = do
+  g <- getStdGen
+  return $ map (indexToEntry r) $ take (round $ pc * fromIntegral s) $ shuffle' [0..s] (s+1) g
 
 -- | Simulation
 
@@ -93,16 +101,19 @@ randomIndices pc r s= do
 
 -- | Agent handling
 
+randomPop pc rows sz nr = do
+  xs <- randomIndices pc rows (rows^2)
+  return $ splitAt (length xs `div` nr) xs
+
+agents m c = M.size $ M.filter (\v -> view color v == c) $ view entries m
+
 main = do
   let pc = 0.25
   let rows = 20
   --let m = mkMatrix rows rows Nothing :: Matrix Agent
 
-  xs <- randomIndices pc rows (rows^2)
-  let (ys, bs) = splitAt (length xs `div` 2) xs
+  (ys, bs) <- randomPop pc rows (rows^2) 2
 
-
-  print $ length xs
   print $ length bs
   print $ length ys
   -- update it
@@ -110,8 +121,8 @@ main = do
   putStrLn $ display m'
 
   print $ M.size $ view entries m'
-  print $ M.size $ M.filter (\v -> view color v == Yellow) $ view entries m'
-  print $ M.size $ M.filter (\v -> view color v == Blue) $ view entries m'
+  print $ agents m' Yellow
+  print $ agents m' Blue
 
   --return m'
   return m'
