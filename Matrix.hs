@@ -1,7 +1,8 @@
-{-# LANGUAGE NoMonomorphismRestriction, DataKinds #-}
+{-# LANGUAGE NoMonomorphismRestriction, DataKinds, TemplateHaskell #-}
 module Matrix where
 
 import Control.Applicative ((<$>), (<*>), liftA2)
+import Control.Lens
 import Data.List (intercalate, intersperse)
 import qualified Data.Map as M
 import Data.Maybe (fromJust)
@@ -9,45 +10,48 @@ import Data.Monoid
 import System.Random
 
 -- | Matrix datatypes
-
-type Matrix a = M.Map Entry a
-
-data Entry = Entry { row :: Row
-                   , col :: Col
+data Entry = Entry { _row :: Row
+                   , _col :: Col
                    } deriving (Ord, Eq, Show)
 type Row = Int
 type Col = Int
+makeLenses ''Entry
+
+data Matrix v = Matrix { _entries :: M.Map Entry v
+                       , _nrow :: Int
+                       , _ncol :: Int
+                        } deriving (Show)
+makeLenses ''Matrix
 
 -- | Agent datatypes
-data Agent = Agent {color :: Color} deriving (Eq, Ord, Show)
-
+data Agent = Agent {_color :: Color} deriving (Eq, Ord, Show)
 data Color = Blue | Yellow deriving (Eq, Ord)
 instance Show Color where
   show Blue = "B"
   show Yellow = "Y"
+makeLenses ''Agent
 
 textRender (Just (Agent c)) = show c
 textRender (Nothing) = " "
 
 -- | Matrix creation
-mkMatrix :: Row -> Col -> a -> M.Map Entry a
-mkMatrix rows cols x = M.fromList $ zip (pairs rows cols) $ repeat x
-
-pairs :: Row -> Col -> [Entry]
-pairs rows cols = [ Entry i j | i <- [0..rows], j <- [0..cols]]
+--mkMatrix :: Row -> Col -> k -> v -> Matrix a
+mkMatrix rows cols entries = Matrix (M.fromList entries) rows cols
 
 -- | Matrix updating
-ncol = (+) 1 . col . last . M.keys
-nrow = (+) 1 . row . last . M.keys
+-- ncol = (+) 1 . col . last . M.keys
+-- nrow = (+) 1 . row . last . M.keys
 size x = nrow x * ncol x
 
-updateEntries :: (Entry -> Bool) -> (a -> a) -> Matrix a -> Matrix a
-updateEntries predicate updateFunc = M.mapWithKey (\k v -> if predicate k then updateFunc v else v)
+updateEntries :: (Entry -> Bool) -> (v -> v) -> Matrix v -> Matrix v
+updateEntries predicate updateFunc m = over entries (M.mapWithKey (\k v -> if predicate k then updateFunc v else v)) m
 
 -- | Rendering
-
---display :: Matrix a -> String
-display x = concat $ intercalate ["\n"] $ map (intersperse " ") $ partition (nrow x) $ map textRender $ M.elems x
+display :: Matrix Agent -> String
+display x = concat $ intercalate ["\n"] $ map (intersperse " ") $ partition (view nrow x) alls where
+  alls = M.elems $ M.union filled empties
+  empties = M.fromList [(Entry i j, ".") | i <- [0.. view nrow x], j <- [0.. view ncol x]]
+  filled = M.map (show . view color) $ view entries x
 
 -- | Split a list into lists of the supplied length.
 partition :: Int -> [a] -> [[a]]
@@ -57,11 +61,9 @@ partition n xs = go n xs where
     (p, s) = splitAt n xs
 
 -- | Random indices
-randomIndices pc m = do
+randomIndices pc r s= do
   rg <- getStdGen
   let
-    s = size m
-    r = nrow m
     idx = take (round $ pc * fromIntegral s) $ randomRs (0, s) rg
     ex = map (indexToEntry r) idx
     indexToEntry :: Int -> Int -> Entry
@@ -94,14 +96,22 @@ randomIndices pc m = do
 main = do
   let pc = 0.25
   let rows = 20
-  let m = mkMatrix rows rows Nothing :: Matrix (Maybe Agent)
+  --let m = mkMatrix rows rows Nothing :: Matrix Agent
 
-  xs <- randomIndices pc m
-  let (bs, ys) = splitAt (length xs `div` 2) xs
+  xs <- randomIndices pc rows (rows^2)
+  let (ys, bs) = splitAt (length xs `div` 2) xs
 
+
+  print $ length xs
+  print $ length bs
+  print $ length ys
   -- update it
-  let m' = updateEntries (\k -> k `elem` ys) (\v -> Just $ Agent Yellow) $ updateEntries (\k -> k `elem` bs) (\v -> Just $ Agent Blue) m
-  --let m' = updateEntries (\k -> k `elem` bs) (\v -> Just $ Agent Blue) m
+  let m' = updateEntries (\k -> k `elem` ys) (\v -> Agent Yellow) $ mkMatrix rows rows $ zip bs $ repeat (Agent Blue)
   putStrLn $ display m'
+
+  print $ M.size $ view entries m'
+  print $ M.size $ M.filter (\v -> view color v == Yellow) $ view entries m'
+  print $ M.size $ M.filter (\v -> view color v == Blue) $ view entries m'
+
   --return m'
   return m'
