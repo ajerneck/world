@@ -18,7 +18,7 @@ prop_sample_lengths pc rows = monadicIO $ do
 prop_matrix_agent_numbers :: RealFrac a => a -> Int -> Property
 prop_matrix_agent_numbers pc rows = monadicIO $ do
   (ys, bs) <- run $ randomPop pc rows (rows^2) 2
-  let m = updateEntries (\k -> k `elem` ys) (\v -> Agent Yellow) $ mkMatrix rows rows $ zip bs $ repeat (Agent Blue)
+  let m = mkMatrix rows rows $ (zip ys $ repeat (Agent Yellow))  ++ (zip bs $ repeat (Agent Blue))
   let ys' = agents m Yellow
   let bs' = agents m Blue
   assert $ closeMatch ys' bs'
