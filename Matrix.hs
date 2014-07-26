@@ -117,7 +117,8 @@ main = do
   print $ length bs
   print $ length ys
   -- update it
-  let m' = updateEntries (\k -> k `elem` ys) (\v -> Agent Yellow) $ mkMatrix rows rows $ zip bs $ repeat (Agent Blue)
+  let m' = mkMatrix rows rows $ (zip ys $ repeat (Agent Yellow))  ++ (zip bs $ repeat (Agent Blue))
+
   putStrLn $ display m'
 
   print $ M.size $ view entries m'
