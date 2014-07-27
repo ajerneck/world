@@ -63,12 +63,22 @@ partition n xs = go n xs where
   go n xs = p : (go n s) where
     (p, s) = splitAt n xs
 
+-- | Initialization
 
-randomIndices pc r s = do
-  g <- getStdGen
-  return $ map (indexToEntry r) $ take (round $ pc * fromIntegral s) $ shuffle' [0..s] (s+1) g where
-    indexToEntry :: Int -> Int -> Entry
-    indexToEntry r = uncurry Entry . flip divMod r
+randomSample :: (RandomGen gen) => gen -> Int -> [a] -> [a]
+randomSample g len seq = take len $ shuffle' seq (length seq) g
+
+indexToEntry :: Int -> Int -> Entry
+indexToEntry r = uncurry Entry . flip divMod r
+
+
+-- | Randomly initialize a square matrix of size rows^2 with a
+-- population of size popSize, evenly divided among the individuals in
+-- the list individuals.
+populate :: (RandomGen gen) => gen -> [a] -> Int -> Int -> Matrix a
+populate g individuals popSize rows =  mkMatrix rows rows $ popList where
+  popList = concat $ zipWith (\e a -> zip e $ repeat a) els individuals
+  els = chunksOf (popSize `div` length individuals +1) $ map (indexToEntry rows) $ randomSample g popSize [0..(rows^2)]
 
 
 -- | Simulation
