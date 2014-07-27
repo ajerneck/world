@@ -1,4 +1,5 @@
 /.cabal-sandbox/
-/Matrix_flymake.hs
-/World_flymake.hs
+*_flymake.hs
+*.prof
 /dist/
+/report.html
