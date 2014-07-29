@@ -3,15 +3,16 @@ module Matrix where
 
 import Control.Applicative ((<$>), (<*>), liftA2)
 import Control.Lens
-import Data.List (intercalate, intersperse, delete, (\\))
+import Data.List (intercalate, intersperse, delete, (\\), find)
 import Data.List.Split (chunksOf)
 import qualified Data.Map as M
 import Data.Maybe (fromJust, fromMaybe, catMaybes)
 import Data.Monoid
+import qualified Data.Set as S
 import System.Random
 import System.Random.Shuffle
 
-import Debug.Trace (trace)
+-- import Debug.Trace (trace)
 
 -- | Matrix datatypes
 data Entry = Entry { _row :: Int
@@ -86,14 +87,32 @@ populate g individuals popSize rows =  mkMatrix rows rows $ popList where
 -- | Simulation
 
 -- | Run one iteration of the simulation.
-iteration :: (RandomGen gen) => gen -> Matrix Agent -> Matrix Agent
-iteration g m = foldl (\mm a -> move g mm a) m $ M.keys $ M.filterWithKey (\k v -> stay m 0.3 k) $ view entries m
+iteration :: (RandomGen gen, Fractional a, Ord a) => gen -> a -> Matrix Agent -> Matrix Agent
+iteration g lvl m = foldl (\mm a -> move g mm a) m $ M.keys $ M.filterWithKey (\k v -> stay m lvl k) $ view entries m
 
-
+-- | TODO: can I memoize this?
 move :: (RandomGen gen) => gen -> Matrix Agent -> Entry -> Matrix Agent
 move g m e = over entries (updateLocation old new) m where
   old = e
-  new = head $ randomSample g 1 (pos m \\ es m )
+  new = head $ randomSample g 1 $ p''
+  p'' = filter (\k -> not $ M.member k $ view entries m) $ pos m
+
+
+iteration' g lvl m = foldl (\mm x -> move' g mm x) m $ toMoveAndEmptyCells where
+  toMoves = M.keys $ M.filterWithKey (\k v -> stay m lvl k) $ view entries m
+  emptyCells = randomSample g (length toMoves) $ filter (\k -> not $ M.member k $ view entries m) $ pos m
+  toMoveAndEmptyCells = zip toMoves emptyCells
+
+
+
+-- | TODO: can I memoize this?
+move' :: (RandomGen gen) => gen -> Matrix Agent -> (Entry, Entry) -> Matrix Agent
+move' g m (old,new) = over entries (updateLocation old new) m where
+  -- old = e
+  -- new = head $ randomSample g 1 $ p''
+  -- p'' = filter (\k -> not $ M.member k $ view entries m) $ pos m
+
+
 
 pos :: Matrix Agent -> [Entry]
 pos m = map (indexToEntry (view nrow m)) [0..(M.size $ (view entries m))]
@@ -133,23 +152,3 @@ chkNs m' fe = do
   print $ M.lookup (fe) $ view entries m'
   print $ neighbors m' (fe)
   print $ neighborSimilarity m' (fe)
-
-
-main = do
-  g <- getStdGen
-  let rows = 10
-  let pc = 0.33
-  let pop = floor $ pc * rows^2
-
-  print pop
-  let m = populate g [Agent Yellow, Agent Blue] pop rows
-
-  putStrLn "Starting matrix: "
-  putStrLn $ display m
-
-
-  let m' = last $ take 1000 $ iterate (iteration g) m
-
-  putStrLn $ display m'
-
-  return m

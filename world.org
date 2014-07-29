@@ -1,0 +1,7 @@
+* Todo
+** parametrize the configuration
+** make it paralell
+** instead of agent, any type that can be showed and compared (Eq, Show)
+** optimize it
+*** maybe data.map.strict, because I use all the values.
+*** I should move all the Entry stuff out to only do once, for the display, then have the everything else using an intmap or a map
