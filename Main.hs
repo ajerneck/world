@@ -3,6 +3,7 @@
 module Main where
 
 import System.Random
+import System.Environment (getArgs)
 
 import Matrix
 import Types
@@ -14,6 +15,9 @@ simulate iters g = last . take iters . iterate (iteration' g 0.4)
 
 --main :: Int -> IO (Matrix Agent)
 main = do
+  args <- getArgs
+  print args
+  let iterations = read $ head args :: Int
   g <- getStdGen
   let rows = 25
   let pc = 1/3
@@ -25,8 +29,9 @@ main = do
   putStrLn "Starting matrix: "
   putStrLn $ display m
 
+  putStrLn $ "Iterations: " ++ show iterations
 
-  let m' = simulate 100 g m
+  let m' = simulate iterations g m
 
   putStrLn "Finished matrix: "
   putStrLn $ display m'
