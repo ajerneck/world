@@ -3,5 +3,17 @@
 ** make it paralell
 ** instead of agent, any type that can be showed and compared (Eq, Show)
 ** optimize it
-*** maybe data.map.strict, because I use all the values.
+*** DONE maybe data.map.strict, because I use all the value.
+    :LOGBOOK:
+    - State "DONE"       from ""           [2014-07-28 Mon 22:15]
+    :END:
+    - can't see a diff.
+*** do cat world.prof to see what the problem is. 
+    - currently, it's checking for neighbors all the time in neighbors.
+    - ask stackoverflow how to improve performance.
+    - figure out another algorithm to get all the neigbors in one
+      pass:
+      - go over each cell, find members, but, also add the duplicate
+        entries, so that if a is neigmbor to b, b is neighbor to a.
+      - 
 *** I should move all the Entry stuff out to only do once, for the display, then have the everything else using an intmap or a map

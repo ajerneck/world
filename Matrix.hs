@@ -5,7 +5,7 @@ import Control.Applicative ((<$>), (<*>), liftA2)
 import Control.Lens
 import Data.List (intercalate, intersperse, delete, (\\), find)
 import Data.List.Split (chunksOf)
-import qualified Data.Map as M
+import qualified Data.Map.Strict as M
 import Data.Maybe (fromJust, fromMaybe, catMaybes)
 import Data.Monoid
 import qualified Data.Set as S
@@ -103,6 +103,11 @@ iteration' g lvl m = foldl (\mm x -> move' g mm x) m $ toMoveAndEmptyCells where
   emptyCells = randomSample g (length toMoves) $ filter (\k -> not $ M.member k $ view entries m) $ pos m
   toMoveAndEmptyCells = zip toMoves emptyCells
 
+iteration'' g lvl m = foldl (\mm x -> move' g mm x) m $ toMoveAndEmptyCells where
+  toMoves = M.keys $ M.filterWithKey (\k v -> stay m lvl k) $ view entries m
+  emptyCells = randomSample g (length toMoves) $ filter (\k -> not $ M.member k $ view entries m) $ pos m
+  toMoveAndEmptyCells = zip toMoves emptyCells
+  -- is there a way here to calculate all the neighbors in one sweep?
 
 
 -- | TODO: can I memoize this?
@@ -126,14 +131,26 @@ stay m lvl a = neighborSimilarity m a >= lvl
 neighborSimilarity :: (Fractional a) => Matrix Agent -> Entry -> a
 neighborSimilarity m e = sameColor / totalNeighbors where
   totalNeighbors = fromIntegral $ length ns
-  ns = neighbors m e
+  ns = neighbors' m e
   focalColor = fmap (view color) $ M.lookup e $ view entries m
   sameColor = case focalColor of
     Just c -> fromIntegral $ length $ filter (\x -> (==) (view color x)  c ) $ ns
     Nothing -> 0
 
+
 neighbors :: Matrix v -> Entry -> [v]
 neighbors m e = catMaybes $ map (flip M.lookup (view entries m)) $ adjacentEntries 1 e
+
+neighbors' m e = catMaybes $ ks $ es' where
+  --es' = adjacentEntries' (view nrow m) (view ncol m) 1 e
+  es' = adjacentEntries 1 e
+  ks = map (flip M.lookup (view entries m))
+
+
+adjacentEntries' nr nc n x = delete x $ entrySeq (r - n, c - n) (r + n, r + n) where
+  c = view row x
+  r = view col x
+  entrySeq (sr, sc) (er, ec) = [Entry i j | i <- [sr..er], j <- [sc..ec], i >= 0, j >= 0, i <= nr, j <= nc]
 
 
 adjacentEntries n x = delete x $ entrySeq (r - n, c - n) (r + n, r + n) where
